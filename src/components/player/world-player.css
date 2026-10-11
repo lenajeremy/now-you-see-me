@@ -1,0 +1,282 @@
+/* The 3D video player. Panes are transparent layers over one canvas; each takes
+   the input for its view. Sizes come from the world engine at runtime. */
+
+.world-player {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  user-select: none;
+  -webkit-user-select: none;
+  container-type: inline-size;
+}
+
+.world-player__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.world-player__pane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+
+.world-player__pane.dragging {
+  cursor: grabbing;
+}
+
+.world-player__pane.over-screen:not(.dragging) {
+  cursor: pointer;
+}
+
+.world-player.controls-hidden .world-player__pane {
+  cursor: none;
+}
+
+/* View names, only when both views show. */
+.world-player__label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.9);
+  background: rgb(10 12 16 / 0.5);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.world-player[data-mode='split'] .world-player__label {
+  opacity: 1;
+}
+
+.world-player__divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  transform: translateX(-50%);
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.world-player:not([data-mode='split']) .world-player__divider {
+  display: none;
+}
+
+.world-player__divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgb(0 0 0 / 0.55);
+  box-shadow: 1px 0 0 rgb(255 255 255 / 0.12);
+}
+
+.world-player__divider .grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 44px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.55);
+  transform: translate(-50%, -50%);
+  transition: height 150ms ease, background-color 150ms ease;
+}
+
+.world-player__divider:hover .grip,
+.world-player__divider.active .grip {
+  height: 64px;
+  background: #fff;
+}
+
+.world-player__center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.world-player__hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: rgb(10 12 16 / 0.55);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  animation: world-player-hint 2.4s ease-in-out infinite;
+}
+
+@keyframes world-player-hint {
+  0%, 100% { transform: translate(-50%, -50%); }
+  25% { transform: translate(calc(-50% - 10px), -50%); }
+  75% { transform: translate(calc(-50% + 10px), -50%); }
+}
+
+.world-player__unmute {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  background: #fff;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.35);
+  z-index: 3;
+}
+
+.world-player__controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 28px 12px 8px;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.38) 55%, transparent);
+  color: #fff;
+  z-index: 3;
+  transition: opacity 250ms ease;
+}
+
+.world-player.controls-hidden .world-player__controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.world-player__volume {
+  width: 0;
+  opacity: 0;
+  accent-color: #fff;
+  transition: width 200ms ease, opacity 200ms ease;
+}
+
+.group\/volume:hover .world-player__volume,
+.world-player__volume:focus-visible {
+  width: 72px;
+  opacity: 1;
+  margin: 0 6px;
+}
+
+.world-player__scrubber {
+  position: relative;
+  height: 16px;
+  margin: 0 4px 2px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.world-player__scrubber .track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.22);
+  transition: height 120ms ease;
+}
+
+.world-player__scrubber:hover .track {
+  height: 5px;
+}
+
+.world-player__scrubber .buffered,
+.world-player__scrubber .played {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+}
+
+.world-player__scrubber .buffered {
+  background: rgb(255 255 255 / 0.35);
+}
+
+.world-player__scrubber .played {
+  background: var(--color-primary);
+}
+
+.world-player__scrubber .thumb {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 120ms ease;
+}
+
+.world-player__scrubber:hover .thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.world-player__scrubber .tooltip {
+  position: absolute;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: rgb(10 12 16 / 0.85);
+  pointer-events: none;
+}
+
+.world-player__scrubber:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@container (max-width: 520px) {
+  .world-player__label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-player__hint {
+    animation: none;
+  }
+}
+
+/* With both views showing, the hint sits over the first-person side, clear of the divider. */
+.world-player[data-mode='split'] .world-player__hint {
+  left: 75%;
+}
+
+/* Small players (phones): drop the extras so the controls fit on one line. */
+@container (max-width: 520px) {
+  .world-player__volume,
+  .world-player__wide-only {
+    display: none;
+  }
+}

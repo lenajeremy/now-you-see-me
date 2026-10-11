@@ -1,0 +1,16 @@
+node_modules
+dist
+.tmp
+.DS_Store
+*.local
+downloads
+.vercel
+.env*
+media
+.next
+next-env.d.ts
+public/dev-media
+tsconfig.tsbuildinfo
+.claude/
+.agents/
+!.env.example
