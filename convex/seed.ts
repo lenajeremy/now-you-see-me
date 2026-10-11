@@ -150,3 +150,15 @@ export const removeFailed = internalMutation({
     return removed;
   },
 });
+
+/** Undoes an import whose file never reached Mux, so the next run tries it again. */
+export const discardImport = internalMutation({
+  args: { videoId: v.id('videos') },
+  handler: async (ctx, { videoId }) => {
+    const video = await ctx.db.get(videoId);
+    if (!video || video.status !== 'uploading') return false;
+    if (video.muxUploadId) await ctx.scheduler.runAfter(0, internal.mux.discardUpload, { uploadId: video.muxUploadId });
+    await ctx.db.delete(videoId);
+    return true;
+  },
+});

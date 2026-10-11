@@ -3,7 +3,7 @@
 // Each is downloaded from Wikimedia Commons (one at a time, identifying
 // ourselves as their policy asks), converted to 4K H.264 if it's wider than
 // 4K or in a codec Mux may not take, uploaded to Mux, then deleted here.
-//   node scripts/import-commons.mjs [--prod] [title …]
+//   node scripts/import-commons.mjs [--prod] [--smallest-first] [title …]
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 
@@ -13,6 +13,8 @@ const args = process.argv.slice(2);
 const prod = args.includes('--prod');
 const only = args.filter((a) => !a.startsWith('--'));
 const videos = JSON.parse(readFileSync(new URL('./commons-360.json', import.meta.url), 'utf8'));
+// When downloads are slow, get the most videos up soonest.
+if (args.includes('--smallest-first')) videos.sort((a, b) => a.size - b.size);
 mkdirSync(WORK, { recursive: true });
 
 const convex = (fn, payload) => {
@@ -40,7 +42,8 @@ for (const video of videos) {
     const source = `${WORK}/source${video.url.slice(video.url.lastIndexOf('.'))}`;
     rmSync(source, { force: true });
     console.log(`get     ${label}  (${(video.size / 1e9).toFixed(2)} GB)`);
-    run('curl', ['-sS', '--fail', '--retry', '5', '--retry-delay', '20', '-A', UA, '-o', source, video.url]);
+    // Resumes where it left off if Commons drops the connection (it throttles big downloads).
+    run('curl', ['-sS', '--fail', '--retry', '8', '--retry-all-errors', '--retry-delay', '30', '-C', '-', '-A', UA, '-o', source, video.url]);
 
     let file = source;
     const { video: stream, audio } = probe(source);
@@ -56,7 +59,13 @@ for (const video of videos) {
       channel: video.channel, title: video.title, description: video.description, facing: video.facing,
     });
     console.log(`upload  ${label}  → ${videoId}`);
-    run('curl', ['-sS', '--fail', '-X', 'PUT', '-T', file, uploadUrl]);
+    try {
+      run('curl', ['-sS', '--fail', '--retry', '3', '--retry-all-errors', '--retry-delay', '15', '-X', 'PUT', '-T', file, uploadUrl]);
+    } catch (error) {
+      // Leave nothing half-made: the next run will try this one again.
+      convex('seed:discardImport', { videoId });
+      throw error;
+    }
     console.log(`done    ${label}`);
     rmSync(source, { force: true });
     if (file !== source) rmSync(file, { force: true });
